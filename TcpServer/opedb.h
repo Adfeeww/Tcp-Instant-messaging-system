@@ -6,17 +6,17 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QStringList>
-#include "protocol.h"
 
 class OpeDB : public QObject
 {
     Q_OBJECT
 public:
     explicit OpeDB(QObject *parent = nullptr);
+    ~OpeDB();
+
+    void init();
 
     static OpeDB &getInstance();
-    void init();
-    ~OpeDB();
 
     bool handleRegist(const char* name, const char* pwd);
     bool handleLogin(const char* name, const char* pwd);
@@ -32,6 +32,9 @@ signals:
 
 private:
     QSqlDatabase m_db;
+
+    void loadConfig();
+    bool createTables();
 };
 
 #endif // OPEDB_H

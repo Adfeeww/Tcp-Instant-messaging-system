@@ -1,7 +1,7 @@
 #include "opedb.h"
 #include <QMessageBox>
 #include <QDebug>
-#include "protocol.h"
+#include <QSettings>
 
 OpeDB::OpeDB(QObject *parent) : QObject(parent)
 {
@@ -17,25 +17,79 @@ OpeDB &OpeDB::getInstance()
 void OpeDB::init()
 {
     m_db.setHostName("localhost");
-    //数据库位置
-    m_db.setDatabaseName("C:\\Users\\manong\\Desktop\\1\\sqlite3\\cloud.db");
+
+    loadConfig();
 
     if (m_db.open()){
+        //启用外键支持(SQLite默认关闭外键)
         QSqlQuery query;
-        query.exec("SELECT * FROM usrInfo");
-        while(query.next()){
+        query.exec("PRAGMA foreign_key = ON;");
+
+        if (!createTables()){
+            QMessageBox::warning(NULL, "错误", "创建数据库表失败");
+        }
+
+        QSqlQuery selectQuery;
+        selectQuery.exec("SELECT * FROM usrInfo");
+        while(selectQuery.next()){
             QString data = QString("%1,%2,%3,%4")
-                    .arg(query.value(0).toString())
-                    .arg(query.value(1).toString())
-                    .arg(query.value(2).toString())
-                    .arg(query.value(3).toString());
+                    .arg(selectQuery.value(0).toString())
+                    .arg(selectQuery.value(1).toString())
+                    .arg(selectQuery.value(2).toString())
+                    .arg(selectQuery.value(3).toString());
 
             qDebug() << data;
         }
     }
     else {
-        QMessageBox::critical(NULL, "错误", "打开数据失败");
+        QMessageBox::critical(NULL, "错误", "打开数据库失败");
     }
+}
+
+void OpeDB::loadConfig()
+{
+    QSettings settings("server.ini", QSettings::IniFormat);
+
+    if (!settings.contains("database/path")){
+        settings.setValue("database/path", "./cloud.db");
+        settings.sync();
+    }
+
+    QString dbPath = settings.value("database/path").toString();
+    m_db.setDatabaseName(dbPath);
+}
+
+bool OpeDB::createTables()
+{
+    QSqlQuery query;
+    query.exec("CREATE TABLE IF NOT EXISTS usrInfo("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "name TEXT NOT NULL UNIQUE,"
+                "pwd TEXT NOT NULL,"
+                "online INTEGER DEFAULT 0)");
+
+    if (query.lastError().isValid()){
+        qDebug() << query.lastError().text();
+    }
+
+    query.exec("CREATE TABLE IF NOT EXISTS friend("
+               "id INTEGER NOT NULL,"
+               "friendId INTEGER NOT NULL,"
+               "PRIMARY KEY(id, friendId),"
+               "FOREIGN KEY (id) REFERENCES usrInfo (id) ON DELETE CASCADE,"
+               "FOREIGN KEY (friendId) REFERENCES usrInfo (id) ON DELETE CASCADE)");
+
+    if (query.lastError().isValid()){
+        qDebug() << query.lastError().text();
+    }
+
+    //加索引，提高效率
+    query.exec("CREATE INDEX IF NOT EXISTS idx_usrInfo_name ON usrInfo(name)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_usrInfo_online ON usrInfo(online)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_friend_id ON friend(id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_friend_friendId ON friend(friendId)");
+
+    return true;
 }
 
 OpeDB::~OpeDB()

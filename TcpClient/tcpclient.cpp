@@ -268,24 +268,6 @@ void TcpClient::recvMsg()
         }
     }
 }
-#if 0
-//发送信息槽
-void TcpClient::on_send_pb_clicked()
-{
-    QString strMsg = ui->lineEdit->text();
-    if (!strMsg.isEmpty()){
-        PDU *pdu = mkPDU(strMsg.size());
-        pdu->uiMsgType = 8888;
-        memcpy(pdu->caMsg, strMsg.toStdString().c_str(), strMsg.size());
-        m_tcpSocket.write((char*)pdu, pdu->uiPDULen);
-        free(pdu);
-        pdu = NULL;
-    }
-    else {
-        QMessageBox::warning(this, "警告", "消息不能为空");
-    }
-}
-#endif
 
 void TcpClient::on_login_pb_clicked()
 {
