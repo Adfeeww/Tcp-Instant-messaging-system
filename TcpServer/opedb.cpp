@@ -2,6 +2,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QSettings>
+#include "passwordutils.h"
 
 OpeDB::OpeDB(QObject *parent) : QObject(parent)
 {
@@ -103,7 +104,9 @@ bool OpeDB::handleRegist(const char *name, const char *pwd)
         return false;
     }
 
-    QString data = QString("INSERT INTO usrInfo(name, pwd) values(\'%1\', \'%2\')").arg(name).arg(pwd);
+    QString hashPassword = PasswordUtils::getInstance().hashPassword(pwd);
+
+    QString data = QString("INSERT INTO usrInfo(name, pwd) values(\'%1\', \'%2\')").arg(name).arg(hashPassword);
     QSqlQuery query;
     return query.exec(data);
 }
@@ -114,10 +117,11 @@ bool OpeDB::handleLogin(const char *name, const char *pwd)
         return false;
     }
 
+    QString hashPassword = PasswordUtils::getInstance().hashPassword(pwd);
+
     QSqlQuery query;
-    query.prepare("SELECT 1 FROM usrInfo where name = ? AND pwd = ? AND online = 0 LIMIT 1");
+    query.prepare("SELECT pwd FROM usrInfo where name = ? AND online = 0 LIMIT 1");
     query.addBindValue(name);
-    query.addBindValue(pwd);
 
     if (!query.exec()){
         qDebug() << query.lastError().text();
@@ -125,10 +129,14 @@ bool OpeDB::handleLogin(const char *name, const char *pwd)
     }
 
     if (query.next()){
+        if (!PasswordUtils::getInstance().verifyPassword(pwd, hashPassword)){
+            qDebug() << "Password verification failed for user:" << name;
+            return false;
+        }
+
         QSqlQuery up;
-        up.prepare("UPDATE usrInfo SET online = 1 where name = ? AND pwd = ?");
+        up.prepare("UPDATE usrInfo SET online = 1 where name = ?");
         up.addBindValue(name);
-        up.addBindValue(pwd);
 
         if (!up.exec()) {
             qDebug() << "set online failed:" << up.lastError().text();

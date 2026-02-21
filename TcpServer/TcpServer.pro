@@ -20,6 +20,7 @@ SOURCES += \
     mytcpserver.cpp \
     mytcpsocket.cpp \
     opedb.cpp \
+    passwordutils.cpp \
     protocol.cpp \
     tcpserver.cpp
 
@@ -27,6 +28,7 @@ HEADERS += \
     mytcpserver.h \
     mytcpsocket.h \
     opedb.h \
+    passwordutils.h \
     protocol.h \
     tcpserver.h
 
